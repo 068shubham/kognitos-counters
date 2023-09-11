@@ -16,10 +16,6 @@ export class RedisClient {
                 try {
                     const REDIS_NODES = JSON.parse(process.env.REDIS_NODES)
                     RedisClient.connection = new Cluster(REDIS_NODES, { redisOptions: REDIS_OPTIONS, lazyConnect: REDIS_OPTIONS.lazyConnect })
-                    RedisClient.connection.on("error", (err) => {
-                        console.error("Redis connection error", err)
-                        process.exit(1)
-                    })
                 } catch (err) {
                     console.error("Error while creating redis client", err)
                     throw err
@@ -31,6 +27,9 @@ export class RedisClient {
                 const { host, port, password } = JSON.parse(process.env.REDIS_NODE)
                 RedisClient.connection = new Redis(port, host, { ...REDIS_OPTIONS, password })
             }
+            RedisClient.connection.on("error", (err) => {
+                console.error("Redis connection error", err.message)
+            })
             await RedisClient.connection.connect()
         } catch (err) {
             console.error("Error while connecting to redis", err)
