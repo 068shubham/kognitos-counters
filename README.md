@@ -5,13 +5,13 @@ casing of words.
 
 Here is a sequence of sample inputs and outputs to demonstrate the expected
 behavior:
-`Input Output
-{”word”: “Kognitos”} {”occurrences”: 1}
-{”word”: “automation”} {”occurrences”: 1}
-{”word”: “kognitos”} {”occurrences”: 2}
-{”word”: “process”} {”occurrences”: 1}
-{”word”: “beak”} {”occurrences”: 1}
-{”word”: “bAke”} {”occurrences”: 2}`
+Input | Output
+{”word”: “Kognitos”} | {”occurrences”: 1}
+{”word”: “automation”} | {”occurrences”: 1}
+{”word”: “kognitos”} | {”occurrences”: 2}
+{”word”: “process”} | {”occurrences”: 1}
+{”word”: “beak”} | {”occurrences”: 1}
+{”word”: “bAke”} | {”occurrences”: 2}`
 # Request curl
 `curl --location --globoff 'https://n8vowhr2r8.execute-api.us-west-2.amazonaws.com/dev/kognitos/api/v1/word?word={inputWord}'`
 
