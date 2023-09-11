@@ -14,7 +14,7 @@ Input | Output
 {”word”: “beak”} | {”occurrences”: 1}
 {”word”: “bAke”} | {”occurrences”: 2}
 
-# Request curl
+# Testing cURL
 `curl --location --globoff 'https://n8vowhr2r8.execute-api.us-west-2.amazonaws.com/dev/kognitos/api/v1/word?word={inputWord}'`
 
 # High level design
@@ -76,7 +76,7 @@ SQS_QUEUE_URL=https://sqs.us-west-2.amazonaws.com/900256459257/sqs-kognitos-word
 
 # Pushing latest code
 - Create .zip file
-- `bash zip.sh`
+- bash zip.sh
 - Go to [user-request-handler](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/functions/user-request-handler)
 - Upload lambda.zip
 - Go to [sqs-message-handler ](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/functions/sqs-message-handler)
