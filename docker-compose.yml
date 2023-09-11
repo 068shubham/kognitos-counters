@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:7.0.7
+    restart: always
+    ports:
+      - '6301:6379'
+    network_mode: bridge
+  postgres:
+    image: postgres:15.3
+    restart: always
+    ports:
+      - '5401:5432'
+    environment:
+      POSTGRES_USER: kognitos
+      POSTGRES_PASSWORD: 'kognitos'
+      POSTGRES_HOST_AUTH_METHOD: trust
+    network_mode: bridge
