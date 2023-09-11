@@ -1,9 +1,9 @@
-import { SQSEvent, SQSHandler } from 'aws-lambda'
+import { SQSEvent } from 'aws-lambda'
+import { ValidationError } from 'sequelize'
 import { DatabaseManager } from './common/database'
 import { WordRequest } from './common/database/model/word-request.model'
-import { ValidationError } from 'sequelize'
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
+export const handler = async (event: SQSEvent) => {
     const requests = event.Records
         .map(({ messageId, body }) => ({ messageId, body: JSON.parse(body) }))
     try {

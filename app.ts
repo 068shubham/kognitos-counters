@@ -19,19 +19,16 @@ SqsClient.pushToSqs = (sqsMessageBody: any): any => {
         ]
     }
     sqsMessageHandler(message)
+        .then(res => console.log(`SQS handler response: ${JSON.stringify(res)}`))
+        .catch(err => console.error("SQS handler errored", err))
 }
 
 app.use(bodyParser.json())
-app.get("/user-request-handler", async (req: Request, res: Response) => {
+app.get("/dev/kognitos/api/v1/word", async (req: Request, res: Response) => {
     const query: any = req.query
     const gateWayRequest: any = { queryStringParameters: query }
     const out = await userRequestHandler(gateWayRequest)
     res.status(out.statusCode).json(JSON.parse(out.body))
-})
-app.post("/sqs-message-handler", async (req: Request, res: Response) => {
-    const body: any = req.body
-    const out = await sqsMessageHandler(body)
-    res.json(out)
 })
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
     res.status(500)
