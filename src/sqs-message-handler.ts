@@ -2,6 +2,7 @@ import { SQSEvent } from 'aws-lambda'
 import { ValidationError } from 'sequelize'
 import { DatabaseManager } from './common/database'
 import { WordRequest } from './common/database/model/word-request.model'
+import logger from './logger'
 
 export const handler = async (event: SQSEvent) => {
     const requests = event.Records
@@ -22,7 +23,7 @@ export const handler = async (event: SQSEvent) => {
             })).map(({ requestId }) => requestId)
             retryMessageIds = requests.filter(({ body }) => existingRequestIds.indexOf(body.requestId) == -1).map(r => r.messageId)
         } else {
-            console.error("Unknown error in sqs handler", err)
+            logger.error("Unknown error in sqs handler", err)
             retryMessageIds = requests.map(r => r.messageId);
         }
         return { batchItemFailures: retryMessageIds.map(messageId => ({ itemIdentifier: messageId })) }

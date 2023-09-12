@@ -1,40 +1,39 @@
 import { DataTypes, Model } from "sequelize"
 import { DatabaseManager } from ".."
 
-export class WordRequest extends Model {
+export class AggregateWordCounts extends Model {
     declare id: number
-    declare requestId: string
-    declare originalWord: string
     declare searchKey: string
-    declare createdAt: Date
+    declare count: number
+    declare createdOn: Date
+    declare updatedOn: Date
 }
 
-WordRequest.init({
+AggregateWordCounts.init({
     id: {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true
     },
-    requestId: {
-        field: "request_id",
-        type: DataTypes.UUID,
-        unique: true
-    },
-    originalWord: {
-        field: "original_word",
-        type: DataTypes.STRING
-    },
     searchKey: {
         field: "search_key",
-        type: DataTypes.STRING
+        type: DataTypes.STRING,
+        unique: true
+    },
+    count: {
+        type: DataTypes.BIGINT,
     },
     createdOn: {
         field: "created_on",
         type: DataTypes.DATE
+    },
+    updatedOn: {
+        field: "updated_on",
+        type: DataTypes.DATE
     }
 }, {
-    tableName: "kognitos_words",
+    tableName: "kognitos_aggregate_word_counts",
     sequelize: DatabaseManager.connection,
     createdAt: 'created_on',
-    updatedAt: false
+    updatedAt: 'updated_on'
 })

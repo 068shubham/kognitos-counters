@@ -4,3 +4,6 @@ dist/
 lambda.zip
 .DS_Store
 .env
+loadtest/__pycache__
+loadtest/.python-version
+logs/
