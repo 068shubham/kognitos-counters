@@ -1,33 +1,36 @@
-import 'dotenv/config';
+import 'dotenv/config'
+import logger from '../src/logger';
 
-import { Liquibase, LiquibaseConfig, POSTGRESQL_DEFAULT_CONFIG } from 'liquibase';
+import { Liquibase, LiquibaseConfig, LiquibaseLogLevels, POSTGRESQL_DEFAULT_CONFIG } from 'liquibase'
 
 if (!process.env.POSTGRES_CONFIG) {
     throw new Error("Please provide valid POSTGRES_CONFIG")
 }
 
-const { host, port, database, password, username, connectionTimeout = 10000, ssl = true } = JSON.parse(process.env.POSTGRES_CONFIG)
+const { host, port, database, password, username, ssl = true } = JSON.parse(process.env.POSTGRES_CONFIG)
 
 const myConfig: LiquibaseConfig = {
     ...POSTGRESQL_DEFAULT_CONFIG,
     url: `jdbc:postgresql://${host}:${port}/${database}${ssl ? '?sslmode=require' : ''}`,
     username: username,
     password: password,
+    logLevel: LiquibaseLogLevels.Off,
     changeLogFile: './migration/postgres/main-changelog.xml'
 }
 const instance = new Liquibase(myConfig)
 
-async function doEet() {
-    // await instance.status()
-    await instance.update({ labels: "main_tables" })
-    // await instance.tag({ tag: "release_1" })
-    // await instance.status()
-    // await instance.rollback({tag: 'test_tables_1_release'})
-    // await instance.dropAll()
+const actions: { [action: string]: () => Promise<any> } = {
+    status: async () => await instance.status(),
+    migration: async () => await instance.update({ labels: "main_tables" }),
+    rollback: async () => await instance.rollbackToDate({ date: "2023-01-01T00:00:00" }),
+    rollbackToTag: async () => await instance.rollback({ tag: process.argv[3] }),
 }
-
-doEet().then((res) => {
-    console.log("Migration completed", res)
-}).catch((err) => {
-    console.error("Migration failed")
-})
+const action = process.argv[2]
+if (actions[action]) {
+    logger.info(`running ${action}`)
+    actions[action]()
+        .then((res: any) => logger.info(`${action} completed`, res))
+        .catch((err: any) => logger.error(`${action} failed`, err))
+} else {
+    logger.error(`Invalid action ${action}`)
+}

@@ -5,9 +5,12 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "migration": "ts-node ./migration",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "local": "ts-node app.ts"
+    "migration": "ts-node ./migration migration",
+    "rollback": "ts-node ./migration rollback",
+    "local": "ts-node app.ts",
+    "redis-flush": "echo \"flushall\" | redis-cli -p 6301",
+    "reset": "npm run rollback && npm run redis-flush && npm run migration",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Shubham Agrawal",
   "license": "ISC",
@@ -17,9 +20,8 @@
     "ioredis": "^5.3.2",
     "liquibase": "^4.4.0",
     "pg": "^8.11.3",
-    "pg-hstore": "^2.3.4",
     "sequelize": "^6.33.0",
-    "sequelize-cli": "^6.6.1"
+    "winston": "^3.10.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.119",
@@ -28,6 +30,7 @@
     "@types/node": "^20.5.9",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "ts-node": "^10.9.1",
     "typescript": "^5.1.3"
   }
 }
