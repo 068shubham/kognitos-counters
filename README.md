@@ -15,7 +15,7 @@ Input | Output
 {”word”: “bAke”} | {”occurrences”: 2}
 
 # Testing cURL
-`curl --location --globoff 'https://n8vowhr2r8.execute-api.us-west-2.amazonaws.com/dev/kognitos/api/v1/word?word={inputWord}'`
+`curl --location 'https://zpy880bw2l.execute-api.us-west-2.amazonaws.com/dev/kognitos/api/v2/word?word={word}'`
 
 # High level design
 <img width="610" alt="image" src="https://github.com/068shubham/kognitos-counters/assets/8055274/85ab066b-e3c3-471e-a646-e5d1f8e116eb">
