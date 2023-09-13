@@ -1,19 +1,17 @@
-import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs"
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs'
 
 const queueUrl = process.env.SQS_QUEUE_URL
 if (queueUrl == null) {
-  throw new Error('SQS_QUEUE_URL not valid')
+    throw new Error('SQS_QUEUE_URL not valid')
 }
-const sqsClient = new SQSClient({ region: "us-west-2" })
+const sqsClient = new SQSClient({ region: 'us-west-2' })
 
-export type SqsMessageBody = { requestId: string, originalWord: string, searchKey: string }
+export interface SqsMessageBody { requestId: string, originalWord: string, searchKey: string, refreshCache?: boolean }
 
-export class SqsClient {
-    static async pushToSqs(sqsMessageBody: SqsMessageBody) {
-        const message = new SendMessageCommand({
-            QueueUrl: queueUrl,
-            MessageBody: JSON.stringify(sqsMessageBody)
-        })
-        await sqsClient.send(message)
-    }
+export async function pushToSqs(sqsMessageBody: SqsMessageBody) {
+    const message = new SendMessageCommand({
+        QueueUrl: queueUrl,
+        MessageBody: JSON.stringify(sqsMessageBody)
+    })
+    await sqsClient.send(message)
 }

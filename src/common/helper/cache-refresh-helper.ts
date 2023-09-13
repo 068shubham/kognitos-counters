@@ -1,21 +1,28 @@
-import logger from '../../logger';
-import { DatabaseManager } from '../database'
-import { AggregateWordCounts } from '../database/model/aggregate-word-counts.model'
-import { RedisClient } from '../redis'
+import databaseManager from '../database';
+import { AggregateWordCounts } from '../database/model/aggregate-word-counts.model';
+import redis from '../redis';
+import { logError } from '../util/error-handler.util';
 
-export class CacheRefreshHelper {
-
-    static async updateSeachKeyCache(searchKey: string, redisKey: string): Promise<number> {
-        try {
-            await DatabaseManager.init();
-            const aggregate = await AggregateWordCounts.findOne({ where: { searchKey } })
-            const count = aggregate ? +aggregate.count : 0
-            await RedisClient.updateSearchKeyCount(redisKey, count)
-            return count
-        } catch (err: unknown) {
-            logger.error("Error whiling refreshing cache", err)
-            throw err
-        }
+export async function updateSeachKeyCache(searchKey: string): Promise<number> {
+    try {
+        await databaseManager.init();
+        const aggregate = await AggregateWordCounts.findOne({ where: { searchKey } })
+        const count = aggregate ? +aggregate.count : 0
+        await redis.updateSearchKeyCount(searchKey, count)
+        return count
+    } catch (err: unknown) {
+        logError(err, 'updateSeachKeyCache')
+        throw err
     }
+}
 
+export async function bulkUpdateSeachKeyCache(searchKeys: string[]): Promise<number[]> {
+    try {
+        await databaseManager.init();
+        const promises = searchKeys.map(updateSeachKeyCache)
+        return await Promise.all(promises)
+    } catch (err: unknown) {
+        logError(err, 'bulkUpdateSeachKeyCache')
+        throw err
+    }
 }

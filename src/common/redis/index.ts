@@ -1,119 +1,154 @@
-import { Cluster, ClusterOptions, Redis, RedisOptions } from "ioredis"
-import { SEARCH_KEY_CACHE_EXPIRY } from "../constant/kognitos-counters.constant"
-import logger from "../../logger"
+import { Cluster, ClusterOptions, Redis, RedisOptions } from 'ioredis'
+import { SEARCH_KEY_CACHE_EXPIRY } from '../constant/kognitos-counters.constant'
+import logger from '../../logger'
+import { logError } from '../util/error-handler.util'
 
-const CONNECTION_TIMEOUT = 50 * 1000
+const INITIALISATION_TIMEOUT = 50 * 1000
+const CONNECTION_TIMEOUT = 2 * 1000
 const COMMAND_TIMEOUT = 500
+
 const BASIC_REDIS_OPTIONS: RedisOptions = {
     connectTimeout: CONNECTION_TIMEOUT,
     commandTimeout: COMMAND_TIMEOUT
 }
 
-const redisErrorsCount: { [error: string]: number } = {}
-
-const resetErrorsCount = () => Object.keys(redisErrorsCount).forEach(e => { redisErrorsCount[e] = 0 })
+const resetErrorsCount = (redisErrorsCount: { [error: string]: number }) => Object.keys(redisErrorsCount).forEach(e => { redisErrorsCount[e] = 0 })
 
 export class RedisClient {
-    static initialised = false
-    static connection: Cluster | Redis
 
-    static async init() {
-        if (!RedisClient.initialised || process.env.REDIS_NO_REUSE_CONNECTION) {
-            try {
-                process.env.REDIS_MODE == "CLUSTER" ? RedisClient.initRedisCluster() : RedisClient.initRedisStandalone()
-                return new Promise((resolve, reject) => {
-                    RedisClient.connection.on("connect", (err) => {
-                        logger.info("Redis connection established")
-                        resetErrorsCount()
-                        if (!RedisClient.initialised) {
-                            RedisClient.initialised = true
-                            resolve(undefined)
-                        }
-                    })
-                    RedisClient.connection.on("error", (err) => {
-                        if (!redisErrorsCount[err.message]) {
-                            redisErrorsCount[err.message] = 0
-                        }
-                        ++redisErrorsCount[err.message]
-                        logger.error(`[${redisErrorsCount[err.message]}] - Redis connection error ${err.message}`)
-                    })
-                    RedisClient.connection.on("reconnecting", (delay: number) => {
-                        logger.info(`Redis reconnecting ${delay}`)
-                    })
+    private redisErrorsCount: { [error: string]: number } = {}
+
+    private initialised = false
+
+    connection: Redis | Cluster
+
+    constructor() {
+        this.connection = process.env.REDIS_MODE == 'CLUSTER' ? this.getRedisClusterConnection() : this.getRedisStandaloneConnection()
+    }
+
+    async init() {
+        if (!this.initialised) {
+            this.initialised = true
+            const promise = new Promise<void>((resolve, reject) => {
+                this.connection.on('connect', () => {
+                    logger.info('Redis connection established')
+                    resetErrorsCount(this.redisErrorsCount)
+                    resolve()
                 })
-            } catch (err) {
-                logger.error("Error initialising connection to redis", err)
-                throw err
-            }
+                this.connection.on('error', (...args) => {
+                    const err = args[0]
+                    if (!this.redisErrorsCount[err.message]) {
+                        this.redisErrorsCount[err.message] = 0
+                    }
+                    ++this.redisErrorsCount[err.message]
+                    if (this.redisErrorsCount[err.message] > 5) {
+                        logger.error(`Redis connection error: ${err.message}`)
+                    }
+                })
+                this.connection.on('close', () => {
+                    logger.info('Redis connection closed')
+                })
+                this.connection.on('reconnecting', (delay: number) => {
+                    logger.info(`Redis reconnecting in ${delay}ms`)
+                })
+                this.connection.on('wait', () => {
+                    logger.info('Redis waiting')
+                })
+                this.connection.connect()
+                    .then(() => resolve())
+                    .catch(err => {
+                        logger.error(`${err.message} Waiting for ${INITIALISATION_TIMEOUT}ms before rejecting.`)
+                        setTimeout(() => {
+                            if (this.connection.status != 'connect') {
+                                reject({ error: 'Could not connect to redis', ...this.redisErrorsCount })
+                            }
+                        }, INITIALISATION_TIMEOUT)
+                    })
+            })
+            return promise
         }
     }
 
-    static initRedisCluster() {
+    close() {
+        this.connection.disconnect()
+    }
+
+    getRedisClusterConnection() {
         if (!process.env.REDIS_NODES) {
-            throw new Error("Please provide valid REDIS_NODES")
+            throw new Error('Please provide valid REDIS_NODES')
         }
         const REDIS_NODES = JSON.parse(process.env.REDIS_NODES)
-        const redisOptions: ClusterOptions = { ...BASIC_REDIS_OPTIONS }
-        RedisClient.connection = new Cluster(REDIS_NODES, { redisOptions })
+        const redisOptions: ClusterOptions = {
+            ...BASIC_REDIS_OPTIONS,
+            lazyConnect: true,
+            clusterRetryStrategy: (times, reason) => {
+                logger.info(`Retry reason ${reason}`)
+                return Math.min(100 * times, 5000)
+            }
+        }
+        return new Cluster(REDIS_NODES, redisOptions)
     }
 
-    static initRedisStandalone() {
+    getRedisStandaloneConnection() {
         if (!process.env.REDIS_NODE) {
-            throw new Error("Please provide valid REDIS_NODE")
+            throw new Error('Please provide valid REDIS_NODE')
         }
         const { host, port, password } = JSON.parse(process.env.REDIS_NODE)
         const redisOptions: RedisOptions = {
             password, ...BASIC_REDIS_OPTIONS,
-            retryStrategy: (times) => Math.min(100 * times, 5000),
+            lazyConnect: true,
+            retryStrategy: (times) => Math.min(100 * times, 500),
         }
-        RedisClient.connection = new Redis(port, host, redisOptions)
+        return new Redis(port, host, redisOptions)
     }
 
-    static async getSearchKeyCount(searchKey: string) {
+    async getSearchKeyCount(searchKey: string) {
         try {
-            const value = await RedisClient.connection.get(searchKey)
+            const value = await this.connection.get(searchKey)
             return value == null ? null : +value
-        } catch (err) {
-            logger.error("Error in getSearchKeyCount", err)
+        } catch (err: unknown) {
+            logError(err, 'getSearchKeyCount')
             throw err
         }
     }
 
-    static async updateSearchKeyCount(searchKey: string, count: number) {
+    async updateSearchKeyCount(searchKey: string, count: number) {
         try {
-            return await RedisClient.connection.set(searchKey, count, "EX", SEARCH_KEY_CACHE_EXPIRY, "NX")
-        } catch (err) {
-            logger.error("Error in updateSearchKeyCount", err)
+            return await this.connection.set(searchKey, count, 'EX', SEARCH_KEY_CACHE_EXPIRY, 'NX')
+        } catch (err: unknown) {
+            logError(err, 'updateSearchKeyCount')
             throw err
         }
     }
 
-    static async bulkUpdateSearchKeyCount(requests: { searchKey: string, count: number }[]) {
+    async bulkUpdateSearchKeyCount(requests: { searchKey: string, count: number }[]) {
         try {
-            const promises = requests.map(({ searchKey, count }) => RedisClient.updateSearchKeyCount(searchKey, count))
+            const promises = requests.map(({ searchKey, count }) => this.updateSearchKeyCount(searchKey, count))
             await Promise.all(promises)
-        } catch (err) {
-            logger.error("Error in bulkUpdateSearchKeyCount", err)
+        } catch (err: unknown) {
+            logError(err, 'bulkUpdateSearchKeyCount')
             throw err
         }
     }
 
-    static async increaseSearchKeyCount(searchKey: string, count: number = 1) {
+    async increaseSearchKeyCount(searchKey: string, count: number = 1) {
         try {
-            return await RedisClient.connection.incrby(searchKey, count)
-        } catch (err) {
-            logger.error("Error in increaseSearchKeyCount", err)
+            return await this.connection.incrby(searchKey, count)
+        } catch (err: unknown) {
+            logError(err, 'increaseSearchKeyCount')
             throw err
         }
     }
 
-    static async bulkIncreaseSearchKeyCount(requests: { [searchKey: string]: number }) {
+    async bulkIncreaseSearchKeyCount(requests: { [searchKey: string]: number }) {
         try {
-            const promises = Object.keys(requests).map(searchKey => RedisClient.increaseSearchKeyCount(searchKey, requests[searchKey]))
+            const promises = Object.keys(requests).map(searchKey => this.increaseSearchKeyCount(searchKey, requests[searchKey]))
             await Promise.all(promises)
-        } catch (err) {
-            logger.error("Error in bulkIncreaseSearchKeyCount", err)
+        } catch (err: unknown) {
+            logError(err, 'bulkIncreaseSearchKeyCount')
             throw err
         }
     }
 }
+
+export default new RedisClient()

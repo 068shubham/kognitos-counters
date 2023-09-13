@@ -1,5 +1,5 @@
-import { DataTypes, Model } from "sequelize"
-import { DatabaseManager } from ".."
+import { DataTypes, Model } from 'sequelize'
+import databaseManager from '..'
 
 export class WordRequest extends Model {
     declare id: number
@@ -16,25 +16,25 @@ WordRequest.init({
         primaryKey: true
     },
     requestId: {
-        field: "request_id",
+        field: 'request_id',
         type: DataTypes.UUID,
         unique: true
     },
     originalWord: {
-        field: "original_word",
+        field: 'original_word',
         type: DataTypes.STRING
     },
     searchKey: {
-        field: "search_key",
+        field: 'search_key',
         type: DataTypes.STRING
     },
     createdOn: {
-        field: "created_on",
+        field: 'created_on',
         type: DataTypes.DATE
     }
 }, {
-    tableName: "kognitos_words",
-    sequelize: DatabaseManager.connection,
+    tableName: 'kognitos_words',
+    sequelize: databaseManager.connection,
     createdAt: 'created_on',
     updatedAt: false
 })

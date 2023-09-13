@@ -1,5 +1,5 @@
-import { DataTypes, Model } from "sequelize"
-import { DatabaseManager } from ".."
+import { DataTypes, Model } from 'sequelize'
+import databaseManager from '..'
 
 export class AggregateWordCounts extends Model {
     declare id: number
@@ -16,7 +16,7 @@ AggregateWordCounts.init({
         primaryKey: true
     },
     searchKey: {
-        field: "search_key",
+        field: 'search_key',
         type: DataTypes.STRING,
         unique: true
     },
@@ -24,16 +24,16 @@ AggregateWordCounts.init({
         type: DataTypes.BIGINT,
     },
     createdOn: {
-        field: "created_on",
+        field: 'created_on',
         type: DataTypes.DATE
     },
     updatedOn: {
-        field: "updated_on",
+        field: 'updated_on',
         type: DataTypes.DATE
     }
 }, {
-    tableName: "kognitos_aggregate_word_counts",
-    sequelize: DatabaseManager.connection,
+    tableName: 'kognitos_aggregate_word_counts',
+    sequelize: databaseManager.connection,
     createdAt: 'created_on',
     updatedAt: 'updated_on'
 })

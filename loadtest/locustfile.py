@@ -29,7 +29,6 @@ while len(words) < 50:
     words.add("{}{}".format(uuid.uuid4(),uuid.uuid4()).replace("-", "")[:random.randint(3, 55)])
 [print(word) for word in sorted(words, key=cmp_to_key(mycmp))]
 
-
 weighted_words = []
 times = 10
 for w in words:
@@ -42,4 +41,4 @@ print(len(weighted_words))
 class HelloWorldUser(FastHttpUser):
     @task
     def hello_world(self):
-        self.client.get("/dev/kognitos/api/v1/word?word={}".format(weighted_words[random.randint(0, len(weighted_words) - 1)]))
+        self.client.get("/local/kognitos/api/v1/word?word={}".format(weighted_words[random.randint(0, len(weighted_words) - 1)]))

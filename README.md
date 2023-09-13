@@ -20,7 +20,6 @@ Input | Output
 # High level design
 <img width="610" alt="image" src="https://github.com/068shubham/kognitos-counters/assets/8055274/85ab066b-e3c3-471e-a646-e5d1f8e116eb">
 
-
 # Infra components
 ## lambda
 1. [user-request-handler](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/functions/user-request-handler) - To handle incoming user APIs

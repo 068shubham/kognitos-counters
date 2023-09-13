@@ -18,7 +18,7 @@ CREATE INDEX kognitos_words__search_key ON kognitos_words (search_key);
 CREATE TABLE kognitos_aggregate_word_counts
 (
     id            SERIAL PRIMARY KEY,
-    search_key    VARCHAR(55) NOT NULL,
+    search_key    VARCHAR(255) NOT NULL,
     count         BIGINT,
     created_on    TIMESTAMP WITHOUT TIME ZONE DEFAULT (now()),
     updated_on    TIMESTAMP WITHOUT TIME ZONE DEFAULT (now()),

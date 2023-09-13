@@ -1,0 +1,21 @@
+{
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+        "@typescript-eslint"
+    ],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
+    "rules": {
+        "no-console": "error",
+        "eol-last": "error",
+        "quotes": [
+            "error",
+            "single"
+        ],
+        "@typescript-eslint/no-explicit-any": "off"
+    }
+}
