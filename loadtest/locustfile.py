@@ -41,4 +41,4 @@ print(len(weighted_words))
 class HelloWorldUser(FastHttpUser):
     @task
     def hello_world(self):
-        self.client.get("/local/kognitos/api/v1/word?word={}".format(weighted_words[random.randint(0, len(weighted_words) - 1)]))
+        self.client.get("/api/v1/word?word={}".format(weighted_words[random.randint(0, len(weighted_words) - 1)]))

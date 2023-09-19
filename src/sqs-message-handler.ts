@@ -1,10 +1,10 @@
-import { SQSEvent } from 'aws-lambda'
+import logger from './logger'
+
 import { ValidationError } from 'sequelize'
 import { DatabaseManager } from './common/database'
 import { WordRequest } from './common/database/model/word-request.model'
 import { bulkUpdateSeachKeyCache } from './common/helper/cache-refresh-helper'
 import { SqsMessageBody } from './common/sqs/sqs'
-import logger from './logger'
 
 interface SqsMessage { messageId: string, body: SqsMessageBody }
 
@@ -23,7 +23,7 @@ async function handlerError(requests: SqsMessage[], err: unknown) {
     return { batchItemFailures: retryMessageIds.map(messageId => ({ itemIdentifier: messageId })) }
 }
 
-export const handler = async ({ Records }: SQSEvent) => {
+export const handler = async ({ Records }: { Records: { messageId: string, body: any }[] }) => {
     const databaseManager = new DatabaseManager()
     const requests: SqsMessage[] = Records.map(({ messageId, body }) => ({ messageId, body: JSON.parse(body) }))
     try {

@@ -31,7 +31,7 @@ export class RedisClient {
             this.initialised = true
             const promise = new Promise<void>((resolve, reject) => {
                 this.connection.on('connect', () => {
-                    logger.info('Redis connection established')
+                    logger.debug('Redis connection established')
                     resetErrorsCount(this.redisErrorsCount)
                     resolve()
                 })
@@ -46,13 +46,13 @@ export class RedisClient {
                     }
                 })
                 this.connection.on('close', () => {
-                    logger.info('Redis connection closed')
+                    logger.debug('Redis connection closed')
                 })
                 this.connection.on('reconnecting', (delay: number) => {
-                    logger.info(`Redis reconnecting in ${delay}ms`)
+                    logger.debug(`Redis reconnecting in ${delay}ms`)
                 })
                 this.connection.on('wait', () => {
-                    logger.info('Redis waiting')
+                    logger.debug('Redis waiting')
                 })
                 this.connection.connect()
                     .then(() => resolve())
@@ -82,7 +82,7 @@ export class RedisClient {
             ...BASIC_REDIS_OPTIONS,
             lazyConnect: true,
             clusterRetryStrategy: (times, reason) => {
-                logger.info(`Retry reason ${reason}`)
+                logger.debug(`Retry reason ${reason}`)
                 return Math.min(100 * times, 5000)
             }
         }

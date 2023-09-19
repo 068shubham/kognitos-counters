@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize'
+import { ConnectionError, ConnectionTimedOutError, Sequelize } from 'sequelize'
 import logger from '../../logger'
 
 if (!process.env.POSTGRES_CONFIG) {
@@ -30,6 +30,10 @@ export class DatabaseManager {
                         }
                     }
                 },
+                match: [
+                    ConnectionError,
+                    ConnectionTimedOutError
+                ]
             },
         })
     }

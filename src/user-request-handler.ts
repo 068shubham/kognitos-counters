@@ -1,10 +1,11 @@
+import { logError } from './common/util/error-handler.util'
+
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { randomUUID } from 'crypto'
 import { MAX_WORD_LENGTH } from './common/constant/kognitos-counters.constant'
 import { updateSeachKeyCache } from './common/helper/cache-refresh-helper'
 import { RedisClient } from './common/redis'
 import { SqsMessageBody, pushToSqs } from './common/sqs/sqs'
-import { logError } from './common/util/error-handler.util'
 
 class InvalidRequestException extends Error {
     constructor(message: string) {
