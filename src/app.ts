@@ -5,12 +5,11 @@ import './prototypes'
 import bodyParser from 'body-parser'
 import { randomUUID } from 'crypto'
 import express, { Express, Request, Response, Router } from 'express'
-import { EachBatchPayload } from 'kafkajs'
-import { consumer, producer } from './common/kafka'
-import { handler } from './sqs-message-handler'
-import { handlerV1 as userRequestHandlerV1, handlerV2 as userRequestHandlerV2, handlerV3 as userRequestHandlerV3 } from './user-request-handler'
 import databaseClient from './common/database'
+import { consumer, initKafka } from './common/kafka'
 import redisClient from './common/redis'
+import { handlerV1 as userRequestHandlerV1, handlerV2 as userRequestHandlerV2, handlerV3 as userRequestHandlerV3 } from './user-request-handler'
+import { sqsMessageHandlerWrapper } from './app-handler'
 
 const app: Express = express()
 const port = process.env.PORT || '8080'
@@ -53,48 +52,11 @@ app.use((error: Error, _req: Request, res: Response): void => {
     return
 })
 
-const resolvedOffSets = new Set()
-
-const sqsMessageHandlerWrapper = async ({ batch: { topic, messages }, resolveOffset }: EachBatchPayload) => {
-    logger.info(`${messages.length} kafka messages received`, { topic })
-    const { batchItemFailures } = await handler({
-        Records: messages.filter(({ value, offset }) => value !== null && !resolvedOffSets.has(offset)).map(m => ({
-            body: m.value?.toString(),
-            messageId: m.offset
-        }))
-    })
-    if (batchItemFailures && batchItemFailures.length > 0) {
-        const errorMessage = `${batchItemFailures.length} messages failed`
-        logger.error(errorMessage)
-        const failedOffSets = new Set(batchItemFailures.map(f => +f.itemIdentifier))
-        const minFailed = Math.min(...failedOffSets)
-        const offSetsToResolve = messages.filter(({ offset }) => !failedOffSets.has(+offset))
-        offSetsToResolve.forEach(({ offset }) => resolvedOffSets.add(offset))
-        offSetsToResolve.sort()
-        let offSetToResolve = '-1'
-        for (const { offset } of offSetsToResolve) {
-            if (+offset >= minFailed) {
-                break
-            } else {
-                offSetToResolve = offset
-            }
-        }
-        if (offSetToResolve != '-1') {
-            logger.info(`resolving ${offSetToResolve} offset`)
-            resolveOffset(offSetToResolve)
-        }
-    } else {
-        const offSetsToResolve = messages.map(({ offset }) => +offset)
-        resolveOffset(`${Math.max(...offSetsToResolve)}`)
-    }
-}
-
 async function init() {
     await databaseClient.init()
     await redisClient.init()
-    await producer.init()
-    await consumer.init()
-    consumer.subscribe(sqsMessageHandlerWrapper)
+    await initKafka()
+    await consumer.start(sqsMessageHandlerWrapper)
 }
 init()
     .then(() => app.listen(port, () => logger.info(`Server listening on port ${port}`)))

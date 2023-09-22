@@ -5,10 +5,11 @@ import { DatabaseManager } from './common/database'
 import { WordRequest } from './common/database/model/word-request.model'
 import { bulkUpdateSeachKeyCache } from './common/helper/cache-refresh-helper'
 import { SqsMessageBody } from './common/sqs/sqs'
+import { SEARCH_KEY_CACHE_NO_TTl } from './common/constant/kognitos-counters.constant'
 
 interface SqsMessage { messageId: string, body: SqsMessageBody }
 
-async function handlerError(requests: SqsMessage[], err: unknown) {
+async function handleError(requests: SqsMessage[], err: unknown) {
     let retryMessageIds;
     if (err instanceof ValidationError && err.name == 'SequelizeUniqueConstraintError') {
         const existingRequestIds = (await WordRequest.findAll({
@@ -23,9 +24,8 @@ async function handlerError(requests: SqsMessage[], err: unknown) {
     return { batchItemFailures: retryMessageIds.map(messageId => ({ itemIdentifier: messageId })) }
 }
 
-export const handler = async ({ Records }: { Records: { messageId: string, body: any }[] }) => {
-    const databaseManager = new DatabaseManager()
-    const requests: SqsMessage[] = Records.map(({ messageId, body }) => ({ messageId, body: JSON.parse(body) }))
+async function saveWordsToDatabase(requests: SqsMessage[]) {
+    const databaseManager = DatabaseManager.getInstance()
     try {
         await databaseManager.init()
         const inserts = requests.map(({ body: { requestId, originalWord, searchKey } }) => ({ requestId, originalWord, searchKey }))
@@ -34,10 +34,26 @@ export const handler = async ({ Records }: { Records: { messageId: string, body:
             batchItemFailures: []
         }
     } catch (err: unknown) {
-        return await handlerError(requests, err)
+        return await handleError(requests, err)
     } finally {
-        const searchKeys = requests.map(r => r.body).filter(b => b.refreshCache).map(r => r.searchKey)
-        await bulkUpdateSeachKeyCache(searchKeys)
         databaseManager.close()
     }
+}
+
+export const handlerV1 = async ({ Records }: { Records: { messageId: string, body: any }[] }) => {
+    const requests: SqsMessage[] = Records.map(({ messageId, body }) => ({ messageId, body: JSON.parse(body) }))
+    return saveWordsToDatabase(requests)
+}
+
+export const handlerV2 = async ({ Records }: { Records: { messageId: string, body: any }[] }) => {
+    const requests: SqsMessage[] = Records.map(({ messageId, body }) => ({ messageId, body: JSON.parse(body) }))
+    return saveWordsToDatabase(requests)
+}
+
+export const handlerV3 = async ({ Records }: { Records: { messageId: string, body: any }[] }) => {
+    const requests: SqsMessage[] = Records.map(({ messageId, body }) => ({ messageId, body: JSON.parse(body) }))
+    const response = saveWordsToDatabase(requests)
+    const searchKeys = requests.map(r => r.body).filter(b => b.refreshCache).map(r => r.searchKey)
+    await bulkUpdateSeachKeyCache(searchKeys, SEARCH_KEY_CACHE_NO_TTl)
+    return response
 }

@@ -9,7 +9,7 @@
         "build": "tsc",
         "migration": "ts-node ./migration migration",
         "rollback": "ts-node ./migration rollback",
-        "local": "ts-node app.ts",
+        "local": "ts-node src/app.ts",
         "redis-flush": "echo \"flushall\" | redis-cli -p 6301",
         "reset": "npm run rollback && npm run redis-flush && npm run migration",
         "test": "echo \"Error: no test specified\" && exit 1",

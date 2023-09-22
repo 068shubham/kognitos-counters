@@ -2,7 +2,7 @@ import { logError } from './common/util/error-handler.util'
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { randomUUID } from 'crypto'
-import { MAX_WORD_LENGTH } from './common/constant/kognitos-counters.constant'
+import { MAX_WORD_LENGTH, SEARCH_KEY_CACHE_TTL } from './common/constant/kognitos-counters.constant'
 import { updateSeachKeyCache } from './common/helper/cache-refresh-helper'
 import { RedisClient } from './common/redis'
 import { SqsMessageBody, pushToSqs } from './common/sqs/sqs'
@@ -33,11 +33,11 @@ function handleErrorResponse(error: unknown) {
 
 export const handlerV1 = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     let sqsMessageBody
-    const redis = new RedisClient()
+    const redis = RedisClient.getInstance()
     try {
         const originalWord: string = getWordFromRequest(event)
         const requestId = randomUUID()
-        const searchKey = `v1_${originalWord}`
+        const searchKey = `v1:${originalWord}`
         sqsMessageBody = { requestId, originalWord, searchKey }
         await redis.init()
         const occurrences = await redis.increaseSearchKeyCount(searchKey)
@@ -51,14 +51,14 @@ export const handlerV1 = async (event: APIGatewayProxyEvent): Promise<APIGateway
     } finally {
         redis.close()
         if (sqsMessageBody) {
-            await pushToSqs(sqsMessageBody)
+            await pushToSqs(sqsMessageBody, 'v1')
         }
     }
 }
 
 export const handlerV2 = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     let sqsMessageBody
-    const redis = new RedisClient()
+    const redis = RedisClient.getInstance()
     try {
         const originalWord: string = getWordFromRequest(event)
         const requestId = event.requestContext.requestId
@@ -67,7 +67,7 @@ export const handlerV2 = async (event: APIGatewayProxyEvent): Promise<APIGateway
         await redis.init()
         let occurrences = await redis.getSearchKeyCount(searchKey)
         if (occurrences == null) {
-            occurrences = await updateSeachKeyCache(searchKey)
+            occurrences = await updateSeachKeyCache(searchKey, SEARCH_KEY_CACHE_TTL)
         }
         // Increment occurrences by 1 to consider current count, which will get updated asynchronously
         ++occurrences
@@ -78,14 +78,14 @@ export const handlerV2 = async (event: APIGatewayProxyEvent): Promise<APIGateway
     } finally {
         redis.close()
         if (sqsMessageBody != null) {
-            await pushToSqs(sqsMessageBody)
+            await pushToSqs(sqsMessageBody, 'v2')
         }
     }
 }
 
 export const handlerV3 = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     let sqsMessageBody: SqsMessageBody | null = null
-    const redis = new RedisClient()
+    const redis = RedisClient.getInstance()
     try {
         const originalWord: string = getWordFromRequest(event)
         const requestId = event.requestContext.requestId
@@ -105,7 +105,7 @@ export const handlerV3 = async (event: APIGatewayProxyEvent): Promise<APIGateway
     } finally {
         redis.close()
         if (sqsMessageBody != null) {
-            await pushToSqs(sqsMessageBody)
+            await pushToSqs(sqsMessageBody, 'v3')
         }
     }
 }

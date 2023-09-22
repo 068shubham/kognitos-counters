@@ -1,19 +1,36 @@
-import { Kafka, Producer } from 'kafkajs'
-import { KOGNITOS_COUNTERS_USER_INPUT_TOPIC } from '.'
 import logger from '../../logger'
+
+import { Kafka, Producer } from 'kafkajs'
 
 export default class KognitosProducer {
     private producer: Producer
+    private initialised = false
 
     constructor(kafka: Kafka) {
-        this.producer = kafka.producer()
+        this.producer = kafka.producer({
+            allowAutoTopicCreation: false
+        })
     }
 
     async init() {
-        await this.producer.connect()
+        if (!this.initialised) {
+            const promise = new Promise<void>((resolve, reject) => {
+                this.producer.on('producer.connect', (event) => {
+                    logger.info('Producer connected', event)
+                    this.initialised = true
+                    resolve()
+                })
+                this.producer.on('producer.network.request_timeout', (event) => {
+                    logger.error('Producer timeout', event)
+                    reject()
+                })
+            })
+            await this.producer.connect()
+            return promise
+        }
     }
 
-    async send(value: any) {
+    async send(topic: string, value: any) {
         if (value == null) {
             logger.warn('null values not supported in KognitosProducer')
             return
@@ -25,6 +42,7 @@ export default class KognitosProducer {
                 value = `${value}`
             }
         }
-        this.producer.send({ topic: KOGNITOS_COUNTERS_USER_INPUT_TOPIC, messages: [{ value }] })
+        this.producer.send({ topic, messages: [{ value }] })
     }
+
 }
