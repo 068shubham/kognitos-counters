@@ -1,15 +1,15 @@
 import 'dotenv/config'
-import logger from './logger'
 import './prototypes'
+
+import logger from './logger'
 
 import bodyParser from 'body-parser'
 import { randomUUID } from 'crypto'
 import express, { Express, Request, Response, Router } from 'express'
 import databaseClient from './common/database'
-import { consumer, initKafka } from './common/kafka'
+import { initKafka } from './common/kafka'
 import redisClient from './common/redis'
 import { handlerV1 as userRequestHandlerV1, handlerV2 as userRequestHandlerV2, handlerV3 as userRequestHandlerV3 } from './user-request-handler'
-import { sqsMessageHandlerWrapper } from './app-handler'
 
 const app: Express = express()
 const port = process.env.PORT || '8080'
@@ -35,7 +35,6 @@ routes.get('/v3/word', async (req: Request, res: Response) => {
     const out = await userRequestHandlerV3(gateWayRequest)
     res.status(out.statusCode).json(JSON.parse(out.body))
 })
-
 app.use('/api', routes)
 
 app.use((_req: Request, res: Response): void => {
@@ -44,7 +43,6 @@ app.use((_req: Request, res: Response): void => {
     })
     return
 })
-
 app.use((error: Error, _req: Request, res: Response): void => {
     res.status(500).json({
         error: error.message
@@ -55,8 +53,7 @@ app.use((error: Error, _req: Request, res: Response): void => {
 async function init() {
     await databaseClient.init()
     await redisClient.init()
-    await initKafka()
-    await consumer.start(sqsMessageHandlerWrapper)
+    await initKafka({ initProducer: true })
 }
 init()
     .then(() => app.listen(port, () => logger.info(`Server listening on port ${port}`)))

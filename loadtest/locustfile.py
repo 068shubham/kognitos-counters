@@ -25,7 +25,7 @@ def cmp_to_key(mycmp):
     return K
 
 words = set()
-while len(words) < 50:
+while len(words) < 5:
     words.add("{}{}".format(uuid.uuid4(),uuid.uuid4()).replace("-", "")[:random.randint(3, 55)])
 [print(word) for word in sorted(words, key=cmp_to_key(mycmp))]
 
@@ -40,5 +40,11 @@ print(len(weighted_words))
 
 class HelloWorldUser(FastHttpUser):
     @task
-    def hello_world(self):
+    def v1(self):
+        self.client.get("/api/v1/word?word={}".format(weighted_words[random.randint(0, len(weighted_words) - 1)]))
+    @task
+    def v2(self):
+        self.client.get("/api/v2/word?word={}".format(weighted_words[random.randint(0, len(weighted_words) - 1)]))
+    @task
+    def v3(self):
         self.client.get("/api/v3/word?word={}".format(weighted_words[random.randint(0, len(weighted_words) - 1)]))

@@ -7,16 +7,26 @@ import KognitosProducer from './kognitos-producer'
 const kafka = new Kafka({
     clientId: 'kognitos',
     brokers: ['localhost:29092'],
-    logLevel: logLevel.WARN
+    logLevel: logLevel.ERROR
 })
 
 export const producer = new KognitosProducer(kafka)
 export const consumer = new KognitosConsumer(kafka, KOGNITOS_COUNTERS_CONSUMER_GROUP_ID)
 export const admin = new KognitosAdmin(kafka)
 
-export async function initKafka() {
+interface KafkaInitConfig {
+    initProducer?: boolean,
+    initConsumer?: boolean
+}
+
+export async function initKafka(config?: KafkaInitConfig) {
+    const { initProducer = false, initConsumer = false } = config || {}
     await admin.init()
     await admin.createTopics()
-    await producer.init()
-    await consumer.init()
+    if (initProducer) {
+        await producer.init()
+    }
+    if (initConsumer) {
+        await consumer.init()
+    }
 }

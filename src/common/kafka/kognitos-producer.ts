@@ -31,8 +31,8 @@ export default class KognitosProducer {
     }
 
     async send(topic: string, value: any) {
-        if (value == null) {
-            logger.warn('null values not supported in KognitosProducer')
+        if (value === null || value === undefined) {
+            logger.warn('null/undefined value not supported in KognitosProducer')
             return
         }
         if (!(value instanceof Buffer)) {
@@ -42,7 +42,9 @@ export default class KognitosProducer {
                 value = `${value}`
             }
         }
-        this.producer.send({ topic, messages: [{ value }] })
+        this.producer.send({ topic, messages: [{ value }] }).catch(err => {
+            logger.error('Error sending message', err)
+        })
     }
 
 }

@@ -47,7 +47,7 @@ function getRedisConnection() {
 
 export class RedisClient {
 
-    private static singleton?: RedisClient = process.env.REUSE_REDIS_CONNECTION ? new RedisClient() : undefined
+    private static singleton?: RedisClient = process.env.REUSE_REDIS_CONNECTION == 'true' ? new RedisClient() : undefined
 
     private redisErrorsCount: { [error: string]: number } = {}
     private initialised = false

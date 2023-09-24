@@ -9,13 +9,15 @@
         "build": "tsc",
         "migration": "ts-node ./migration migration",
         "rollback": "ts-node ./migration rollback",
-        "local": "ts-node src/app.ts",
+        "local-app": "ts-node src/app.ts",
+        "local-consumer": "ts-node src/consumer.ts",
         "redis-flush": "echo \"flushall\" | redis-cli -p 6301",
         "reset": "npm run rollback && npm run redis-flush && npm run migration",
         "test": "echo \"Error: no test specified\" && exit 1",
         "preupdate": "npm run bundle",
         "prebundle": "npm run type-check",
-        "bundle": "webpack"
+        "bundle": "webpack",
+        "loadtest": "cd loadtest && locust"
     },
     "author": "Shubham Agrawal",
     "license": "ISC",

@@ -35,7 +35,7 @@ function getConnection() {
 
 export class DatabaseManager {
 
-    private static singleton?: DatabaseManager = process.env.REUSE_REDIS_CONNECTION ? new DatabaseManager() : undefined
+    private static singleton?: DatabaseManager = process.env.REUSE_POSTGRES_CONNECTION == 'true' ? new DatabaseManager() : undefined
 
     private initialised = false
 
