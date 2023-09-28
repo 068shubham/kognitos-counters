@@ -25,23 +25,29 @@ function getHandlerForTopic(topic: string) {
 }
 
 export const sqsMessageHandlerWrapper = async ({ batch: { topic, messages }, resolveOffset }: EachBatchPayload) => {
-    logger.info(`${messages.length} kafka messages received`, { topic })
+    logger.debug(`${messages.length} kafka messages received`, { topic })
     const handler = getHandlerForTopic(topic)
     if (!handler) {
         logger.warn(`No handler found for topic ${topic}`)
         return
     }
     const { batchItemFailures } = await handler({
-        Records: messages.filter(({ value, offset }) => value !== null && !resolvedOffSets.has(offset)).map(m => ({
-            body: m.value?.toString(),
-            messageId: m.offset
-        }))
+        Records: messages
+            .filter(({ value, offset }) => value !== null && !resolvedOffSets.has(offset))
+            .map(m => ({
+                body: m.value?.toString(),
+                messageId: m.offset
+            }))
     })
     if (batchItemFailures && batchItemFailures.length > 0) {
         const errorMessage = `${batchItemFailures.length} messages failed`
         logger.error(errorMessage)
-        const failedOffSets = new Set(batchItemFailures.map(f => +f.itemIdentifier))
-        const minFailed = Math.min(...failedOffSets)
+        const failedOffSets = new Set()
+        let minFailed = +batchItemFailures[0].itemIdentifier
+        batchItemFailures.forEach(({ itemIdentifier }) => {
+            minFailed = Math.min(minFailed, +itemIdentifier)
+            failedOffSets.add(+itemIdentifier)
+        })
         const offSetsToResolve = messages.filter(({ offset }) => !failedOffSets.has(+offset))
         offSetsToResolve.forEach(({ offset }) => resolvedOffSets.add(offset))
         offSetsToResolve.sort()
@@ -58,7 +64,7 @@ export const sqsMessageHandlerWrapper = async ({ batch: { topic, messages }, res
             resolveOffset(offSetToResolve)
         }
     } else {
-        const offSetsToResolve = messages.map(({ offset }) => +offset)
-        resolveOffset(`${Math.max(...offSetsToResolve)}`)
+        const offSetToResolve = messages.reduce((max, { offset }) => Math.max(max, +offset), 0)
+        resolveOffset(`${offSetToResolve}`)
     }
 }
